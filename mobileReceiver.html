@@ -5,34 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TV Receiver</title>
     <style>
-        body { text-align: center; font-size: 24px; font-family: Arial, sans-serif; }
+        body { text-align: center; font-family: Arial, sans-serif; font-size: 24px; }
     </style>
 </head>
 <body>
-
     <h2>📺 TV Receiver</h2>
     <p id="status">Waiting for connection...</p>
     <p id="action">Action: None</p>
 
     <script>
+        let serviceUUID = "12345678-1234-5678-1234-56789abcdef0";
+        let characteristicUUID = "abcdef01-1234-5678-1234-56789abcdef0";
+
         async function startBluetooth() {
             try {
-                const device = await navigator.bluetooth.requestDevice({
+                const server = await navigator.bluetooth.requestDevice({
                     acceptAllDevices: true,
-                    optionalServices: ['generic_access']
-                });
+                    optionalServices: [serviceUUID]
+                }).then(device => device.gatt.connect());
 
-                const server = await device.gatt.connect();
-                const services = await server.getPrimaryServices();
-
-                if (services.length === 0) {
-                    alert("No services found!");
-                    return;
-                }
-
-                const firstService = services[0];
-                const characteristics = await firstService.getCharacteristics();
-                const characteristic = characteristics[0];
+                const service = await server.getPrimaryService(serviceUUID);
+                const characteristic = await service.getCharacteristic(characteristicUUID);
 
                 document.getElementById("status").innerText = "✅ Connected to Mobile";
 
