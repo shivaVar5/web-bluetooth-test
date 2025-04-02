@@ -13,26 +13,22 @@
     <h2>📺 TV Receiver</h2>
     <p id="status">Waiting for connection...</p>
     <p id="action">Action: None</p>
+    <button onclick="startBluetooth()">🔍 Start Bluetooth</button>
 
     <script>
+        let serviceUUID = "generic_access";  
+        let characteristicUUID = "gap.device_name"; 
+
         async function startBluetooth() {
             try {
                 const device = await navigator.bluetooth.requestDevice({
                     acceptAllDevices: true,
-                    optionalServices: ['generic_access']
+                    optionalServices: [serviceUUID]
                 });
 
                 const server = await device.gatt.connect();
-                const services = await server.getPrimaryServices();
-
-                if (services.length === 0) {
-                    alert("No services found!");
-                    return;
-                }
-
-                const firstService = services[0];
-                const characteristics = await firstService.getCharacteristics();
-                const characteristic = characteristics[0];
+                const service = await server.getPrimaryService(serviceUUID);
+                const characteristic = await service.getCharacteristic(characteristicUUID);
 
                 document.getElementById("status").innerText = "✅ Connected to Mobile";
 
@@ -44,11 +40,9 @@
 
                 await characteristic.startNotifications();
             } catch (error) {
-                console.error("Bluetooth Connection Failed", error);
+                console.error("❌ Bluetooth Connection Failed", error);
             }
         }
-
-        startBluetooth();
     </script>
 </body>
 </html>
