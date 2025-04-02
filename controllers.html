@@ -3,37 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bluetooth Controller</title>
+    <title>Mobile Bluetooth Controller</title>
     <style>
-        body { text-align: center; font-family: Arial, sans-serif; }
+        body { text-align: center; font-family: Arial, sans-serif; user-select: none; }
         button { font-size: 18px; padding: 10px; margin: 10px; }
+        #touchArea { width: 90vw; height: 50vh; background: lightgray; margin: 20px auto; display: flex; align-items: center; justify-content: center; }
     </style>
 </head>
 <body>
-    <h2>🎮 Mobile Bluetooth Controller</h2>
-    <button onclick="connectBluetooth()">🔗 Pair with TV</button>
-    <button onclick="sendAction('left')">⬅ Left</button>
-    <button onclick="sendAction('right')">➡ Right</button>
-    <button onclick="sendAction('jump')">🆙 Jump</button>
 
-    <p id="status">Status: Not Connected</p>
+    <h2>🎮 Mobile Controller</h2>
+    <p id="status">Not connected</p>
+    <button onclick="connectBluetooth()">🔗 Connect to TV</button>
+    
+    <div id="touchArea">Touch Here</div>
+
+    <br>
+    <button onclick="sendAction('move_left')">⬅️ Move Left</button>
+    <button onclick="sendAction('move_right')">➡️ Move Right</button>
+    <button onclick="sendAction('jump')">🆙 Jump</button>
 
     <script>
         let bluetoothDevice;
         let characteristic;
-        const serviceUUID = "12345678-1234-5678-1234-56789abcdef0";
-        const characteristicUUID = "abcdef01-1234-5678-1234-56789abcdef0";
+        let startX, startY;
 
         async function connectBluetooth() {
             try {
                 bluetoothDevice = await navigator.bluetooth.requestDevice({
                     acceptAllDevices: true,
-                    optionalServices: [serviceUUID]
+                    optionalServices: ['generic_access']
                 });
 
                 const server = await bluetoothDevice.gatt.connect();
-                const service = await server.getPrimaryService(serviceUUID);
-                characteristic = await service.getCharacteristic(characteristicUUID);
+                const services = await server.getPrimaryServices();
+
+                if (services.length === 0) {
+                    alert("No Bluetooth services found on TV");
+                    return;
+                }
+
+                const firstService = services[0]; 
+                const characteristics = await firstService.getCharacteristics();
+                characteristic = characteristics[0];
+
                 document.getElementById("status").innerText = "✅ Connected to TV!";
             } catch (error) {
                 console.error("Bluetooth Connection Failed:", error);
@@ -42,17 +55,43 @@
 
         async function sendAction(action) {
             if (!characteristic) {
-                alert("⚠️ Please connect to TV first!");
+                alert("❌ Not connected to TV!");
                 return;
             }
+
             try {
-                const encoder = new TextEncoder();
+                let encoder = new TextEncoder();
                 await characteristic.writeValue(encoder.encode(action));
-                console.log("📩 Sent:", action);
+                console.log("📤 Sent:", action);
             } catch (error) {
-                console.error("Error sending action:", error);
+                console.error("Failed to send action:", error);
             }
         }
+
+        document.getElementById("touchArea").addEventListener("touchstart", function (event) {
+            startX = event.touches[0].clientX;
+            startY = event.touches[0].clientY;
+        });
+
+        document.getElementById("touchArea").addEventListener("touchend", function (event) {
+            let endX = event.changedTouches[0].clientX;
+            let endY = event.changedTouches[0].clientY;
+            let diffX = endX - startX;
+            let diffY = endY - startY;
+
+            if (Math.abs(diffX) > Math.abs(diffY)) {
+                if (diffX > 30) {
+                    sendAction("move_right");
+                } else if (diffX < -30) {
+                    sendAction("move_left");
+                }
+            } else {
+                if (diffY < -30) {
+                    sendAction("jump");
+                }
+            }
+        });
     </script>
+
 </body>
 </html>
