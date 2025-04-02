@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TV Receiver</title>
+    <style>
+        body { text-align: center; font-size: 24px; font-family: Arial, sans-serif; }
+    </style>
+</head>
+<body>
+
+    <h2>📺 TV Receiver</h2>
+    <p id="status">Waiting for connection...</p>
+    <p id="action">Action: None</p>
+
+    <script>
+        async function startBluetooth() {
+            try {
+                const device = await navigator.bluetooth.requestDevice({
+                    acceptAllDevices: true,
+                    optionalServices: ['generic_access']
+                });
+
+                const server = await device.gatt.connect();
+                const services = await server.getPrimaryServices();
+
+                if (services.length === 0) {
+                    alert("No services found!");
+                    return;
+                }
+
+                const firstService = services[0];
+                const characteristics = await firstService.getCharacteristics();
+                const characteristic = characteristics[0];
+
+                document.getElementById("status").innerText = "✅ Connected to Mobile";
+
+                characteristic.addEventListener("characteristicvaluechanged", (event) => {
+                    let action = new TextDecoder().decode(event.target.value);
+                    document.getElementById("action").innerText = "Action: " + action;
+                    console.log("📩 Received:", action);
+                });
+
+                await characteristic.startNotifications();
+            } catch (error) {
+                console.error("Bluetooth Connection Failed", error);
+            }
+        }
+
+        startBluetooth();
+    </script>
+</body>
+</html>
